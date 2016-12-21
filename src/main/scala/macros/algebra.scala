@@ -16,32 +16,39 @@ class AlgebraMacros(val c: Context) {
 
   def generateFAlgebra(annottees: c.Expr[Any]*): c.Expr[Any] = {
 
-    def trace(s: => String) = {
-      if (sys.props.get("azucar.trace").isDefined)
-        c.info(c.enclosingPosition, s, false)
-    }
+    def trace(s: => String) =
+      c.info(c.enclosingPosition, s, false)
 
     def generate(typeClass: ClassDef) = {
 
-      def fAlgebra: Tree =
-        q"trait FAlgebra[A]"
+      val adtCases: List[Tree] = List.empty
 
-      def iso: Tree =
+      val adt: List[Tree] = q"sealed abstract class InputF[A]" :: adtCases
+
+      val fAlias = q"type F[A] = InputF[A]"
+
+      val fAlgebra = q"""
+        trait FAlgebra[X] extends Algebra[X] {
+          ..$adt
+          $fAlias
+        }
+      """
+
+      val iso =
         q"def iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] = ???"
 
-      val generateCompanion: c.Expr[Any] =
-        c.Expr(q"""
-          object ${typeClass.name.toTermName} {
-            $fAlgebra
-            $iso
-          }
-        """)
+      val generateCompanion = q"""
+        object ${typeClass.name.toTermName} {
+          $fAlgebra
+          $iso
+        }
+      """
 
       val result = c.Expr(q"""
         $typeClass
         $generateCompanion
       """)
-      trace(s"Generated `algebra` ${typeClass.name}:\n" + showCode(result.tree))
+      trace(s"Generated algebra '${typeClass.name}':\n" + showCode(result.tree))
 
       result
     }
