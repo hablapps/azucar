@@ -37,15 +37,21 @@ class AlgebraMacros(val c: Context) {
       val iso =
         q"def iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] = ???"
 
-      val generateCompanion = q"""
-        object ${typeClass.name.toTermName} {
+      val traitName = TypeName(typeClass.name + "FAlgebra")
+
+      val generateTrait = q"""
+        trait $traitName {
           $fAlgebra
           $iso
         }
       """
 
+      val generateCompanion =
+        q"object ${typeClass.name.toTermName} extends $traitName"
+
       val result = c.Expr(q"""
         $typeClass
+        $generateTrait
         $generateCompanion
       """)
       trace(s"Generated algebra '${typeClass.name}':\n" + showCode(result.tree))
