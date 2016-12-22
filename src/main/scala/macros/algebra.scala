@@ -43,10 +43,14 @@ class AlgebraMacros(val c: Context) {
 
       val fAlias = q"type F[A] = InputF[A]"
 
+      // TODO: how do we provide this functor? shapeless?
+      val fFunctor = q"implicit val F: Functor[F] = ???"
+
       val fAlgebra = q"""
         trait FAlgebra[X] extends Algebra[X] {
           ..$adt
           $fAlias
+          $fFunctor
         }
       """
 
@@ -70,7 +74,7 @@ class AlgebraMacros(val c: Context) {
         $generateTrait
         $generateCompanion
       """)
-      trace(s"Generated algebra '${typeClass.name}':\n" + showCode(result.tree))
+      trace(s"Generated algebra for '${typeClass.name}':\n" + showCode(result.tree))
 
       result
     }
