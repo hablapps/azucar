@@ -30,7 +30,7 @@ class AlgebraMacros(val c: Context) {
       }
       val tparamName = typeClass.tparams.head.name
       typeClassMethods.map { method => q"""
-        case class ${capitalizeName(method.name)}[$tparamName]()
+        case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
           extends InputF[$tparamName]
       """
       }
