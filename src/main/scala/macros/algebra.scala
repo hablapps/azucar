@@ -16,34 +16,26 @@ class AlgebraMacros(val c: Context) {
 
   def generateFAlgebra(annottees: c.Expr[Any]*): c.Expr[Any] = {
 
-    def trace(s: => String) =
-      c.info(c.enclosingPosition, s, false)
-
-    def capitalizeName(name: TermName): TypeName = {
-      val TermName(s) = name
-      TypeName(s.capitalize)
-    }
-
-    def adtCases(typeClass: ClassDef): List[ClassDef] = {
-      val typeClassMethods = typeClass.impl.children.collect {
-        case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
-      }
-      val tparamName = typeClass.tparams.head.name
-      typeClassMethods.map { method => q"""
-        case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
-          extends InputF[$tparamName]
-      """
-      }
-    }
-
     def generate(typeClass: ClassDef) = {
 
+      val adtCases: List[ClassDef] = {
+        val typeClassMethods = typeClass.impl.children.collect {
+          case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
+        }
+        val tparamName = typeClass.tparams.head.name
+        typeClassMethods.map { method => q"""
+          case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
+            extends InputF[$tparamName]
+        """
+        }
+      }
+
       val adt: List[Tree] =
-        q"sealed abstract class InputF[_]" :: adtCases(typeClass)
+        q"sealed abstract class InputF[_]" :: adtCases
 
       val fAlias = q"type F[A] = InputF[A]"
 
-      // TODO: how do we provide this functor? shapeless?
+      // TODO: how do we provide this functor evidence? shapeless?
       val fFunctor = q"implicit val F: Functor[F] = ???"
 
       val fAlgebra = q"""
@@ -85,5 +77,13 @@ class AlgebraMacros(val c: Context) {
       case other :: Nil =>
         c.abort(c.enclosingPosition, "@algebra can only be applied to traits")
     }
+  }
+
+  def trace(s: => String) =
+    c.info(c.enclosingPosition, s, false)
+
+  def capitalizeName(name: TermName): TypeName = {
+    val TermName(s) = name
+    TypeName(s.capitalize)
   }
 }

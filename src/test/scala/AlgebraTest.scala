@@ -13,7 +13,8 @@ class AlgebraTest extends FlatSpec with Matchers {
     def mappend(a1: A, a2: A): A
   }
 
-  import scalaz.Isomorphism.{ <~> }
+  /*** Iso to be generated ***/
+  import scalaz.Isomorphism.<~>
   import scalaz.~>
   import Monoid.FAlgebra
   val iso: Monoid <~> FAlgebra = new (Monoid <~> FAlgebra) {
@@ -32,6 +33,7 @@ class AlgebraTest extends FlatSpec with Matchers {
       }
     }
   }
+  /*** End of iso ***/
 
   "Azucar" should "generate an isomorphism" in {
     Monoid.iso
