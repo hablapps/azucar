@@ -46,14 +46,21 @@ class AlgebraMacros(val c: Context) {
         }
       """
 
-      val iso =
-        q"def iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] = ???"
+      val isoImports = List(
+        q"import scalaz.Isomorphism.<~>",
+        q"import scalaz.~>")
+
+      val iso = q"""
+        val iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] =
+          ???
+      """
 
       val traitName = TypeName(typeClass.name + "FAlgebra")
 
       val generateTrait = q"""
         trait $traitName {
           $fAlgebra
+          ..$isoImports
           $iso
         }
       """
