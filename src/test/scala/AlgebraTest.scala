@@ -9,37 +9,16 @@ import macros.algebra
 class AlgebraTest extends FlatSpec with Matchers {
 
   @algebra trait Monoid[A] {
-    def mzero: A
+    def mzero(): A
     def mappend(a1: A, a2: A): A
   }
 
-  /*** Iso to be generated ***/
-  import scalaz.Isomorphism.<~>
-  import scalaz.~>
-  import Monoid.FAlgebra
-  val iso: Monoid <~> FAlgebra = new (Monoid <~> FAlgebra) {
-    def to: Monoid ~> FAlgebra = new (Monoid ~> FAlgebra) {
-      def apply[A](monoid: Monoid[A]): FAlgebra[A] = new FAlgebra[A] {
-        def apply(fx: InputF[A]): A = fx match {
-          case Mzero() => monoid.mzero
-          case Mappend(a1, a2) => monoid.mappend(a1, a2)
-        }
-      }
-    }
-    def from: FAlgebra ~> Monoid = new (FAlgebra ~> Monoid) {
-      def apply[A](falgebra: FAlgebra[A]): Monoid[A] = new Monoid[A] {
-        def mzero = falgebra(falgebra.Mzero())
-        def mappend(a1: A, a2: A) = falgebra(falgebra.Mappend(a1, a2))
-      }
-    }
-  }
-  /*** End of iso ***/
-
-  "Azucar" should "generate an isomorphism" in {
-    Monoid.iso
+  val intMonoid = new Monoid[Int] {
+    def mzero() = 0
+    def mappend(a1: Int, a2: Int) = a1 + a2
   }
 
-  it should "generate a type FAlgebra[A]" in {
+  "Azucar" should "generate a type FAlgebra[A]" in {
     type Whatever[A] = Monoid.FAlgebra[A]
   }
 
@@ -50,5 +29,12 @@ class AlgebraTest extends FlatSpec with Matchers {
         case Mappend(i1, i2) => i1 + i2
       }
     }
+  }
+
+  it should "generate an isomorphism" in {
+    val falgebra = Monoid.iso.to(intMonoid)
+    import falgebra._
+    falgebra(Mappend(3, 2)) shouldBe 5
+    falgebra(Mzero()) shouldBe 0
   }
 }

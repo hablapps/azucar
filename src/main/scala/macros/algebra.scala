@@ -39,7 +39,7 @@ class AlgebraMacros(val c: Context) {
       val fAlias = q"type F[A] = InputF[A]"
 
       // TODO: how do we provide functor evidences? maybe shapeless?
-      val fFunctor = q"implicit val F: Functor[F] = ???"
+      val fFunctor = q"implicit lazy val F: Functor[F] = ???"
 
       val fAlgebra = q"""
         trait FAlgebra[X] extends Algebra[X] {
@@ -53,7 +53,24 @@ class AlgebraMacros(val c: Context) {
         q"import scalaz.Isomorphism.<~>",
         q"import scalaz.~>")
 
-      val natToIns = q"???"
+      val natToIns = {
+        val cases: List[CaseDef] = typeClassMethods.map {
+          case DefDef(_, name, _, vparamss, _, _) => {
+            val idens = vparamss.flatten.map(t => Ident(t.name))
+            val binds =
+              vparamss.flatten.map(t => Bind(t.name, Ident(termNames.WILDCARD)))
+            val rhs = q"algebra.$name(..$idens)"
+            CaseDef(q"${capitalizeName(name)}(..$binds)", EmptyTree, rhs)
+          }
+        }
+
+        val match_ = Match(Ident(TermName("fx")), cases)
+        q"""
+          new FAlgebra[A] {
+            def apply(fx: InputF[A]): A = $match_
+          }
+        """
+      }
 
       val natToDef: DefDef =q"""
         def to: ${typeClass.name} ~> FAlgebra =
@@ -66,7 +83,7 @@ class AlgebraMacros(val c: Context) {
       val natFromIns = {
         val defs: List[DefDef] = typeClassMethods.map {
           // XXX: removes `DEFERRED` modifier. Is this the best way to do so?
-          case m@DefDef(_, name, tparams, vparamss, tpt, _) => {
+          case DefDef(_, name, tparams, vparamss, tpt, _) => {
             val args = vparamss.flatten.map(t => Ident(t.name))
             val rhs =
               q"falgebra(falgebra.${capitalizeName(name.toTermName)}(..$args))"
