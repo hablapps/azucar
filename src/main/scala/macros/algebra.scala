@@ -26,7 +26,8 @@ class AlgebraMacros(val c: Context) {
 
       val adtCases: List[ClassDef] = {
         typeClassMethods.map { method => q"""
-          case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
+          case class ${capitalizeName(method.name.toTypeName)}[$tparamName](
+              ..${method.vparamss.flatten})
             extends InputF[$tparamName]
         """
         }
@@ -52,19 +53,38 @@ class AlgebraMacros(val c: Context) {
         q"import scalaz.Isomorphism.<~>",
         q"import scalaz.~>")
 
+      val natToIns = q"???"
+
       val natToDef: DefDef =q"""
         def to: ${typeClass.name} ~> FAlgebra =
           new (${typeClass.name} ~> FAlgebra) {
             def apply[A](algebra: ${typeClass.name}[A]): FAlgebra[A] =
-              ???
+              $natToIns
           }
       """
+
+      val natFromIns = {
+        val defs: List[DefDef] = typeClassMethods.map {
+          // XXX: removes `DEFERRED` modifier. Is this the best way to do so?
+          case m@DefDef(_, name, tparams, vparamss, tpt, _) => {
+            val args = vparamss.flatten.map(t => Ident(t.name))
+            val rhs =
+              q"falgebra(falgebra.${capitalizeName(name.toTermName)}(..$args))"
+            DefDef(Modifiers(), name, tparams, vparamss, tpt, rhs)
+          }
+        }
+        q"""
+          new ${typeClass.name}[A] {
+            ..$defs
+          }
+        """
+    }
 
       val natFromDef: DefDef = q"""
         def from: FAlgebra ~> ${typeClass.name} =
           new (FAlgebra ~> ${typeClass.name}) {
             def apply[A](falgebra: FAlgebra[A]): ${typeClass.name}[A] =
-              ???
+              $natFromIns
           }
       """
 
@@ -110,8 +130,13 @@ class AlgebraMacros(val c: Context) {
   def trace(s: => String) =
     c.info(c.enclosingPosition, s, false)
 
-  def capitalizeName(name: TermName): TypeName = {
+  def capitalizeName(name: TermName): TermName = {
     val TermName(s) = name
+    TermName(s.capitalize)
+  }
+
+  def capitalizeName(name: TypeName): TypeName = {
+    val TypeName(s) = name
     TypeName(s.capitalize)
   }
 }
