@@ -35,7 +35,7 @@ class AlgebraMacros(val c: Context) {
 
       val fAlias = q"type F[A] = InputF[A]"
 
-      // TODO: how do we provide this functor evidence? shapeless?
+      // TODO: how do we provide functor evidences? maybe shapeless?
       val fFunctor = q"implicit val F: Functor[F] = ???"
 
       val fAlgebra = q"""
@@ -50,9 +50,26 @@ class AlgebraMacros(val c: Context) {
         q"import scalaz.Isomorphism.<~>",
         q"import scalaz.~>")
 
+      val isoToDef: DefDef =q"""
+        def to: ${typeClass.name} ~> FAlgebra =
+          new (${typeClass.name} ~> FAlgebra) {
+            def apply[A](algebra: ${typeClass.name}[A]): FAlgebra[A] = ???
+          }
+      """
+
+      val isoFromDef: DefDef = q"""
+        def from: FAlgebra ~> ${typeClass.name} =
+          new (FAlgebra ~> ${typeClass.name}) {
+            def apply[A](falgebra: FAlgebra[A]): ${typeClass.name}[A] = ???
+          }
+      """
+
       val iso = q"""
-        val iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] =
-          ???
+        val iso: ${typeClass.name} <~> FAlgebra =
+          new (${typeClass.name} <~> FAlgebra) {
+            $isoToDef
+            $isoFromDef
+          }
       """
 
       val traitName = TypeName(typeClass.name + "FAlgebra")
