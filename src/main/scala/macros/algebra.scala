@@ -19,11 +19,27 @@ class AlgebraMacros(val c: Context) {
     def trace(s: => String) =
       c.info(c.enclosingPosition, s, false)
 
+    def capitalizeName(name: TermName): TypeName = {
+      val TermName(s) = name
+      TypeName(s.capitalize)
+    }
+
+    def adtCases(typeClass: ClassDef): List[ClassDef] = {
+      val typeClassMethods = typeClass.impl.children.collect {
+        case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
+      }
+      val tparamName = typeClass.tparams.head.name
+      typeClassMethods.map { method => q"""
+        case class ${capitalizeName(method.name)}[$tparamName]()
+          extends InputF[$tparamName]
+      """
+      }
+    }
+
     def generate(typeClass: ClassDef) = {
 
-      val adtCases: List[Tree] = List.empty
-
-      val adt: List[Tree] = q"sealed abstract class InputF[A]" :: adtCases
+      val adt: List[Tree] =
+        q"sealed abstract class InputF[_]" :: adtCases(typeClass)
 
       val fAlias = q"type F[A] = InputF[A]"
 
