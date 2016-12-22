@@ -18,11 +18,13 @@ class AlgebraMacros(val c: Context) {
 
     def generate(typeClass: ClassDef) = {
 
+      val typeClassMethods = typeClass.impl.children.collect {
+        case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
+      }
+
+      val tparamName = typeClass.tparams.head.name
+
       val adtCases: List[ClassDef] = {
-        val typeClassMethods = typeClass.impl.children.collect {
-          case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
-        }
-        val tparamName = typeClass.tparams.head.name
         typeClassMethods.map { method => q"""
           case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
             extends InputF[$tparamName]
@@ -50,25 +52,27 @@ class AlgebraMacros(val c: Context) {
         q"import scalaz.Isomorphism.<~>",
         q"import scalaz.~>")
 
-      val isoToDef: DefDef =q"""
+      val natToDef: DefDef =q"""
         def to: ${typeClass.name} ~> FAlgebra =
           new (${typeClass.name} ~> FAlgebra) {
-            def apply[A](algebra: ${typeClass.name}[A]): FAlgebra[A] = ???
+            def apply[A](algebra: ${typeClass.name}[A]): FAlgebra[A] =
+              ???
           }
       """
 
-      val isoFromDef: DefDef = q"""
+      val natFromDef: DefDef = q"""
         def from: FAlgebra ~> ${typeClass.name} =
           new (FAlgebra ~> ${typeClass.name}) {
-            def apply[A](falgebra: FAlgebra[A]): ${typeClass.name}[A] = ???
+            def apply[A](falgebra: FAlgebra[A]): ${typeClass.name}[A] =
+              ???
           }
       """
 
-      val iso = q"""
+      val isoVal: ValDef = q"""
         val iso: ${typeClass.name} <~> FAlgebra =
           new (${typeClass.name} <~> FAlgebra) {
-            $isoToDef
-            $isoFromDef
+            $natToDef
+            $natFromDef
           }
       """
 
@@ -78,7 +82,7 @@ class AlgebraMacros(val c: Context) {
         trait $traitName {
           $fAlgebra
           ..$isoImports
-          $iso
+          $isoVal
         }
       """
 
