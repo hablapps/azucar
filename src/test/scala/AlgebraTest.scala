@@ -2,11 +2,16 @@ package org.hablapps.azucar
 
 import org.scalatest._
 
-import scalaz.Functor
-
 import macros.algebra
 
 class AlgebraTest extends FlatSpec with Matchers {
+
+  import cats.derived._, functor._, legacy._
+  import cats.Functor
+
+  case class Person[A](name: String, a: A)
+
+  Functor[Person]
 
   @algebra trait Monoid[A] {
     def mzero(): A
@@ -36,5 +41,12 @@ class AlgebraTest extends FlatSpec with Matchers {
     import falgebra._
     falgebra(Mappend(3, 2)) shouldBe 5
     falgebra(Mzero()) shouldBe 0
+  }
+
+  it should "generate a functor evidence for InputF" in {
+    val falgebra = Monoid.iso.to(intMonoid)
+    import falgebra._
+    F.map(Mappend(3, 2))(_ * 2) shouldBe Mappend(6, 4)
+    F.map(Mzero[Int]())(_ + 1) shouldBe Mzero()
   }
 }

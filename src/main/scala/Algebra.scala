@@ -1,9 +1,9 @@
 package org.hablapps.azucar
 
-import scalaz.Functor
+import cats.Functor
 
 trait Algebra[X] {
   type F[_]
-  implicit val F: Functor[F]
+  val F: Functor[F]
   def apply(fx: F[X]): X
 }

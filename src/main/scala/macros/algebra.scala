@@ -19,7 +19,8 @@ class AlgebraMacros(val c: Context) {
     def generate(typeClass: ClassDef) = {
 
       val typeClassMethods = typeClass.impl.children.collect {
-        case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
+        case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) &&
+                          !m.mods.hasFlag(Flag.PROTECTED) => m
       }
 
       val tparamName = typeClass.tparams.head.name
@@ -33,18 +34,24 @@ class AlgebraMacros(val c: Context) {
         }
       }
 
-      val adt: List[Tree] =
-        q"sealed abstract class InputF[_]" :: adtCases
+      val adt: List[Tree] = q"sealed abstract class InputF[_]" :: adtCases
 
       val fAlias = q"type F[A] = InputF[A]"
 
-      // TODO: how do we provide functor evidences? maybe shapeless?
-      val fFunctor = q"implicit lazy val F: Functor[F] = ???"
+      val functorImports = List(
+        q"import cats.derived._",
+        q"import functor._",
+        q"import legacy._",
+        q"import cats.Functor")
+
+      val fFunctor =
+        q"val F: Functor[InputF] = Functor[InputF]"
 
       val fAlgebra = q"""
         trait FAlgebra[X] extends Algebra[X] {
           ..$adt
           $fAlias
+          ..$functorImports
           $fFunctor
         }
       """
