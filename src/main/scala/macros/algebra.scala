@@ -16,35 +16,30 @@ class AlgebraMacros(val c: Context) {
 
   def generateFAlgebra(annottees: c.Expr[Any]*): c.Expr[Any] = {
 
-    def trace(s: => String) =
-      c.info(c.enclosingPosition, s, false)
+    def generate(typeClass: ClassDef) = {
 
-    def capitalizeName(name: TermName): TypeName = {
-      val TermName(s) = name
-      TypeName(s.capitalize)
-    }
-
-    def adtCases(typeClass: ClassDef): List[ClassDef] = {
       val typeClassMethods = typeClass.impl.children.collect {
         case m: DefDef if !m.mods.hasFlag(Flag.PRIVATE) && !m.mods.hasFlag(Flag.PROTECTED) => m
       }
-      val tparamName = typeClass.tparams.head.name
-      typeClassMethods.map { method => q"""
-        case class ${capitalizeName(method.name)}[$tparamName](..${method.vparamss.flatten})
-          extends InputF[$tparamName]
-      """
-      }
-    }
 
-    def generate(typeClass: ClassDef) = {
+      val tparamName = typeClass.tparams.head.name
+
+      val adtCases: List[ClassDef] = {
+        typeClassMethods.map { method => q"""
+          case class ${capitalizeName(method.name.toTypeName)}[$tparamName](
+              ..${method.vparamss.flatten})
+            extends InputF[$tparamName]
+        """
+        }
+      }
 
       val adt: List[Tree] =
-        q"sealed abstract class InputF[_]" :: adtCases(typeClass)
+        q"sealed abstract class InputF[_]" :: adtCases
 
       val fAlias = q"type F[A] = InputF[A]"
 
-      // TODO: how do we provide this functor? shapeless?
-      val fFunctor = q"implicit val F: Functor[F] = ???"
+      // TODO: how do we provide functor evidences? maybe shapeless?
+      val fFunctor = q"implicit lazy val F: Functor[F] = ???"
 
       val fAlgebra = q"""
         trait FAlgebra[X] extends Algebra[X] {
@@ -54,15 +49,77 @@ class AlgebraMacros(val c: Context) {
         }
       """
 
-      val iso =
-        q"def iso: scalaz.Isomorphism.<~>[${typeClass.name}, FAlgebra] = ???"
+      val isoImports = List(
+        q"import scalaz.Isomorphism.<~>",
+        q"import scalaz.~>")
+
+      val natToIns = {
+        val cases: List[CaseDef] = typeClassMethods.map {
+          case DefDef(_, name, _, vparamss, _, _) => {
+            val idens = vparamss.flatten.map(t => Ident(t.name))
+            val binds =
+              vparamss.flatten.map(t => Bind(t.name, Ident(termNames.WILDCARD)))
+            val rhs = q"algebra.$name(..$idens)"
+            CaseDef(q"${capitalizeName(name)}(..$binds)", EmptyTree, rhs)
+          }
+        }
+
+        val match_ = Match(Ident(TermName("fx")), cases)
+        q"""
+          new FAlgebra[A] {
+            def apply(fx: InputF[A]): A = $match_
+          }
+        """
+      }
+
+      val natToDef: DefDef =q"""
+        def to: ${typeClass.name} ~> FAlgebra =
+          new (${typeClass.name} ~> FAlgebra) {
+            def apply[A](algebra: ${typeClass.name}[A]): FAlgebra[A] =
+              $natToIns
+          }
+      """
+
+      val natFromIns = {
+        val defs: List[DefDef] = typeClassMethods.map {
+          // XXX: removes `DEFERRED` modifier. Is this the best way to do so?
+          case DefDef(_, name, tparams, vparamss, tpt, _) => {
+            val args = vparamss.flatten.map(t => Ident(t.name))
+            val rhs =
+              q"falgebra(falgebra.${capitalizeName(name.toTermName)}(..$args))"
+            DefDef(Modifiers(), name, tparams, vparamss, tpt, rhs)
+          }
+        }
+        q"""
+          new ${typeClass.name}[A] {
+            ..$defs
+          }
+        """
+    }
+
+      val natFromDef: DefDef = q"""
+        def from: FAlgebra ~> ${typeClass.name} =
+          new (FAlgebra ~> ${typeClass.name}) {
+            def apply[A](falgebra: FAlgebra[A]): ${typeClass.name}[A] =
+              $natFromIns
+          }
+      """
+
+      val isoVal: ValDef = q"""
+        val iso: ${typeClass.name} <~> FAlgebra =
+          new (${typeClass.name} <~> FAlgebra) {
+            $natToDef
+            $natFromDef
+          }
+      """
 
       val traitName = TypeName(typeClass.name + "FAlgebra")
 
       val generateTrait = q"""
         trait $traitName {
           $fAlgebra
-          $iso
+          ..$isoImports
+          $isoVal
         }
       """
 
@@ -85,5 +142,18 @@ class AlgebraMacros(val c: Context) {
       case other :: Nil =>
         c.abort(c.enclosingPosition, "@algebra can only be applied to traits")
     }
+  }
+
+  def trace(s: => String) =
+    c.info(c.enclosingPosition, s, false)
+
+  def capitalizeName(name: TermName): TermName = {
+    val TermName(s) = name
+    TermName(s.capitalize)
+  }
+
+  def capitalizeName(name: TypeName): TypeName = {
+    val TypeName(s) = name
+    TypeName(s.capitalize)
   }
 }
