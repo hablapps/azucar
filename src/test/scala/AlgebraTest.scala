@@ -9,10 +9,6 @@ class AlgebraTest extends FlatSpec with Matchers {
   import cats.derived._, functor._, legacy._
   import cats.Functor
 
-  case class Person[A](name: String, a: A)
-
-  Functor[Person]
-
   @algebra trait Monoid[A] {
     def mzero(): A
     def mappend(a1: A, a2: A): A
