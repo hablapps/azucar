@@ -13,22 +13,23 @@ class AlgebraTest extends FunSpec with Matchers {
 
   trait MonoidFAlgebra {
 
-    object Signature extends Signature{
+    sealed abstract class Σ[_];
+    case class Mzero[A]() extends Σ[A];
+    case class Mappend[A](a1: A, a2: A) extends Σ[A];
 
-      sealed abstract class F[_];
-      case class Mzero[A]() extends F[A];
-      case class Mappend[A](a1: A, a2: A) extends F[A];
-
+    implicit object Signature extends Signature[Σ]{
       import cats.derived._;
       import functor._;
       import legacy._;
       import cats.Functor;
 
-      val F: Functor[F] = Functor[F]
+      val F = Functor[Σ]
     };
 
-    trait FAlgebra[X] extends Algebra[X]{
-      val sig: Signature.type = Signature
+    implicit def signatureFunctor[Σ[_]: Signature] = org.hablapps.azucar.Signature[Σ].F
+
+    trait FAlgebra[X] extends Algebra[Σ,X]{
+      val sig: Signature[Σ] = Signature
     }
 
     object FAlgebra{
@@ -45,7 +46,7 @@ class AlgebraTest extends FunSpec with Matchers {
            final class $anon extends ~>[Monoid, FAlgebra] {
              def apply[A](algebra: Monoid[A]): FAlgebra[A] = {
                final class $anon extends FAlgebra[A] {
-                 def apply(fx: F[A]): A = fx match {
+                 def apply(fx: Σ[A]): A = fx match {
                    case Mzero() => algebra.mzero()
                    case Mappend((a1 @ _), (a2 @ _)) => algebra.mappend(a1, a2)
                  }
@@ -83,7 +84,7 @@ class AlgebraTest extends FunSpec with Matchers {
    }
 
   def test(oalgebra: Monoid[Int], falgebra: Monoid.FAlgebra[Int]){
-    import Monoid.Signature._
+    import Monoid.{Mzero, Mappend}
 
     it("zero should match"){
       oalgebra.mzero() shouldBe falgebra(Mzero())
@@ -102,33 +103,37 @@ class AlgebraTest extends FunSpec with Matchers {
     }
 
     val IntMonoidFAlgebra: Monoid.FAlgebra[Int] = Monoid.FAlgebra[Int]
-      // Monoid.iso.to(IntMonoidOAlgebra)
 
     test(IntMonoidOAlgebra, IntMonoidFAlgebra)
   }
 
   describe("Generate O-algebras from F-algebras"){
-    import Monoid.Signature._
+    import Monoid.{Σ, Mzero, Mappend}
 
     implicit val IntMonoidFAlgebra = new Monoid.FAlgebra[Int] {
-      def apply(fx: F[Int]): Int = fx match {
+      def apply(fx: Σ[Int]): Int = fx match {
         case Mzero() => 0
         case Mappend(i1, i2) => i1 + i2
       }
     }
 
     val IntMonoidOAlgebra: Monoid[Int] = Monoid[Int]
-    //   Monoid.iso.from(IntMonoidFAlgebra)
 
     test(IntMonoidOAlgebra, IntMonoidFAlgebra)
   }
 
   describe("Generate Signature"){
-    import Monoid.Signature._
 
-    it("functor evidence should work"){
+    it("Functor for signature should work"){
+      import Monoid.{Mzero, Mappend}, Monoid.Signature.F
+
       F.map(Mappend(3, 2))(_ * 2) shouldBe Mappend(6, 4)
       F.map(Mzero[Int]())(_ + 1) shouldBe Mzero()
+    }
+
+    it("Implicit evidences should be found"){
+      Signature[Monoid.Σ]
+      cats.Functor[Monoid.Σ]
     }
   }
 }
