@@ -2,8 +2,12 @@ package org.hablapps.azucar
 
 import cats.Functor
 
-trait Algebra[X] {
+trait Signature{
   type F[_]
   val F: Functor[F]
-  def apply(fx: F[X]): X
+}
+
+trait Algebra[X]{
+  val sig: Signature
+  def apply(fx: sig.F[X]): X
 }
