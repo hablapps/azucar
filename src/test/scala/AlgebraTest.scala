@@ -17,6 +17,15 @@ class AlgebraTest extends FunSpec with Matchers {
     case class Mzero[A]() extends Σ[A];
     case class Mappend[A](a1: A, a2: A) extends Σ[A];
 
+    object Σ{
+      def to[A](e: A): Σ[A] = ???
+
+      def from[A](s: Σ[A])(m: Monoid[A]): A = s match {
+        case Mzero() => m.mzero()
+        case Mappend(a1,a2) => m.mappend(a1,a2)
+      }
+    }
+
     implicit object Signature extends Signature[Σ]{
       import cats.derived._;
       import functor._;
@@ -93,6 +102,15 @@ class AlgebraTest extends FunSpec with Matchers {
     it("mappend should match"){
       oalgebra.mappend(1,2) shouldBe falgebra(Mappend(1,2))
     }
+
+    it("macros"){
+      Monoid.Σ.to(oalgebra.mzero()) shouldBe Mzero()
+      Monoid.Σ.to(oalgebra.mappend(1,2)) shouldBe Mappend(1,2)
+
+      Monoid.Σ.from(Mzero())(oalgebra) shouldBe oalgebra.mzero()
+      Monoid.Σ.from(Mappend(1,2))(oalgebra) shouldBe oalgebra.mappend(1,2)
+    }
+
   }
 
   describe("Generate F-algebras from O-algebras"){
