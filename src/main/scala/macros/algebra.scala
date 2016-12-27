@@ -65,6 +65,14 @@ class AlgebraMacros(val c: Context) {
         }
       """
 
+      val fAlgSummoner = q"def apply[A](implicit FA: FAlgebra[A]) = FA"
+
+      val fAlgCompanion = q"""
+        object FAlgebra {
+          $fAlgSummoner
+        }
+      """
+
       val isoImports = List(
         q"import scalaz.Isomorphism.<~>",
         q"import scalaz.~>")
@@ -111,7 +119,7 @@ class AlgebraMacros(val c: Context) {
             ..$defs
           }
         """
-    }
+      }
 
       val natFromDef: DefDef = q"""
         def from: FAlgebra ~> ${typeClass.name} =
@@ -129,6 +137,18 @@ class AlgebraMacros(val c: Context) {
           }
       """
 
+      val fromConversor = q"""
+        implicit def fromFAlgebra[$tparamName](implicit
+            FAlgebra: FAlgebra[$tparamName]): ${typeClass.name}[$tparamName] =
+          iso.from(FAlgebra)
+      """
+
+      val toConversor = q"""
+        implicit def fromOAlgebra[$tparamName](implicit
+            OAlgebra: ${typeClass.name}[$tparamName]): FAlgebra[$tparamName] =
+          iso.to(OAlgebra)
+      """
+
       val traitName = TypeName(typeClass.name + "FAlgebra")
 
       val generateTrait = q"""
@@ -136,8 +156,11 @@ class AlgebraMacros(val c: Context) {
           ..$adt
           $adtCompanion
           $fAlgebra
+          $fAlgCompanion
           ..$isoImports
           $isoVal
+          $fromConversor
+          $toConversor
         }
       """
 
