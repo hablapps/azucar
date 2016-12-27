@@ -25,32 +25,41 @@ class AlgebraMacros(val c: Context) {
 
       val tparamName = typeClass.tparams.head.name
 
-      val adtCases: List[ClassDef] = {
+      val adtCases: List[ClassDef] =
         typeClassMethods.map { method => q"""
-          case class ${capitalizeName(method.name.toTypeName)}[$tparamName](
+          case class ${capitalize(method.name.toTypeName, TypeName(_))}[$tparamName](
               ..${method.vparamss.flatten})
-            extends InputF[$tparamName]
+            extends Σ[$tparamName]
         """
         }
-      }
 
-      val adt: List[Tree] = q"sealed abstract class InputF[_]" :: adtCases
+      val adt: List[Tree] = q"sealed abstract class Σ[_]" :: adtCases
 
-      val fAlias = q"type F[A] = InputF[A]"
-
-      val functorImports = List(
+      val kittenImports = List(
         q"import cats.derived._",
         q"import functor._",
         q"import legacy._",
         q"import cats.Functor")
 
+      val functorIns =
+        q"implicit val functorInstance = Functor[Σ]"
+
+      val adtCompanion = q"""
+        object Σ {
+          ..$kittenImports
+          $functorIns
+        }
+      """
+
+      val functorImports = List(
+        q"import cats.instances.option._",
+        q"import cats.Functor")
+
       val fFunctor =
-        q"val F: Functor[InputF] = Functor[InputF]"
+        q"val F: Functor[Σ] = Functor[Σ]"
 
       val fAlgebra = q"""
-        trait FAlgebra[X] extends Algebra[X] {
-          ..$adt
-          $fAlias
+        trait FAlgebra[X] extends Algebra[Σ, X] {
           ..$functorImports
           $fFunctor
         }
@@ -67,14 +76,14 @@ class AlgebraMacros(val c: Context) {
             val binds =
               vparamss.flatten.map(t => Bind(t.name, Ident(termNames.WILDCARD)))
             val rhs = q"algebra.$name(..$idens)"
-            CaseDef(q"${capitalizeName(name)}(..$binds)", EmptyTree, rhs)
+            CaseDef(q"${capitalize(name, TermName(_))}(..$binds)", EmptyTree, rhs)
           }
         }
 
         val match_ = Match(Ident(TermName("fx")), cases)
         q"""
           new FAlgebra[A] {
-            def apply(fx: InputF[A]): A = $match_
+            def apply(fx: Σ[A]): A = $match_
           }
         """
       }
@@ -93,7 +102,7 @@ class AlgebraMacros(val c: Context) {
           case DefDef(_, name, tparams, vparamss, tpt, _) => {
             val args = vparamss.flatten.map(t => Ident(t.name))
             val rhs =
-              q"falgebra(falgebra.${capitalizeName(name.toTermName)}(..$args))"
+              q"falgebra(${capitalize(name.toTermName, TermName(_))}(..$args))"
             DefDef(Modifiers(), name, tparams, vparamss, tpt, rhs)
           }
         }
@@ -124,14 +133,19 @@ class AlgebraMacros(val c: Context) {
 
       val generateTrait = q"""
         trait $traitName {
+          ..$adt
+          $adtCompanion
           $fAlgebra
           ..$isoImports
           $isoVal
         }
       """
 
-      val generateCompanion =
-        q"object ${typeClass.name.toTermName} extends $traitName"
+      val generateCompanion = q"""
+        object ${typeClass.name.toTermName} extends $traitName {
+          def apply[A](implicit ev: ${typeClass.name}[A]) = ev
+        }
+      """
 
       val result = c.Expr(q"""
         $typeClass
@@ -154,13 +168,9 @@ class AlgebraMacros(val c: Context) {
   def trace(s: => String) =
     c.info(c.enclosingPosition, s, false)
 
-  def capitalizeName(name: TermName): TermName = {
-    val TermName(s) = name
-    TermName(s.capitalize)
-  }
-
-  def capitalizeName(name: TypeName): TypeName = {
-    val TypeName(s) = name
-    TypeName(s.capitalize)
-  }
+  def capitalize[N <: Name](name: N, builder: String => N): N =
+    builder(name match {
+      case TermName(s) => s.capitalize
+      case TypeName(s) => s.capitalize
+    })
 }

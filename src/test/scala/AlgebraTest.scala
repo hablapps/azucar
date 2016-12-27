@@ -6,82 +6,82 @@ import macros.algebra
 
 class AlgebraTest extends FunSpec with Matchers {
 
-  /*@algebra*/ trait Monoid[A] {
+  @algebra trait Monoid[A] {
     def mzero(): A
     def mappend(a1: A, a2: A): A
   }
 
-  trait MonoidFAlgebra {
-
-    sealed abstract class Σ[_];
-    case class Mzero[A]() extends Σ[A];
-    case class Mappend[A](a1: A, a2: A) extends Σ[A];
-
-    implicit object Signature extends Signature[Σ]{
-      import cats.derived._;
-      import functor._;
-      import legacy._;
-      import cats.Functor;
-
-      val F = Functor[Σ]
-    };
-
-    implicit def signatureFunctor[Σ[_]: Signature] = org.hablapps.azucar.Signature[Σ].F
-
-    trait FAlgebra[X] extends Algebra[Σ,X]{
-      val sig: Signature[Σ] = Signature
-    }
-
-    object FAlgebra{
-      def apply[X](implicit F: FAlgebra[X]) = F
-    }
-
-     import scalaz.Isomorphism.$less$tilde$greater;
-     import scalaz.$tilde$greater;
-     import Signature._
-
-     val iso: <~>[Monoid, FAlgebra] = {
-       final class $anon extends <~>[Monoid, FAlgebra] {
-         def to: ~>[Monoid, FAlgebra] = {
-           final class $anon extends ~>[Monoid, FAlgebra] {
-             def apply[A](algebra: Monoid[A]): FAlgebra[A] = {
-               final class $anon extends FAlgebra[A] {
-                 def apply(fx: Σ[A]): A = fx match {
-                   case Mzero() => algebra.mzero()
-                   case Mappend((a1 @ _), (a2 @ _)) => algebra.mappend(a1, a2)
-                 }
-               };
-               new $anon()
-             }
-           };
-           new $anon()
-         };
-         def from: ~>[FAlgebra, Monoid] = {
-           final class $anon extends ~>[FAlgebra, Monoid] {
-             def apply[A](falgebra: FAlgebra[A]): Monoid[A] = {
-               final class $anon extends Monoid[A] {
-                 def mzero(): A = falgebra(Mzero());
-                 def mappend(a1: A, a2: A): A = falgebra(Mappend(a1, a2))
-               };
-               new $anon()
-             }
-           };
-           new $anon()
-         }
-       };
-       new $anon()
-     }
-
-     implicit def fromFAlgebra[X](implicit FAlgebra: FAlgebra[X]): Monoid[X] =
-      iso.from(FAlgebra)
-
-    implicit def fromOAlgebra[X](implicit OAlgebra: Monoid[X]): FAlgebra[X] =
-      iso.to(OAlgebra)
-
-   };
-   object Monoid extends MonoidFAlgebra{
-     def apply[A](implicit M: Monoid[A]): Monoid[A] = M
-   }
+  // trait MonoidFAlgebra {
+  //
+  //   sealed abstract class Σ[_];
+  //   case class Mzero[A]() extends Σ[A];
+  //   case class Mappend[A](a1: A, a2: A) extends Σ[A];
+  //
+  //   implicit object Signature extends Signature[Σ]{
+  //     import cats.derived._;
+  //     import functor._;
+  //     import legacy._;
+  //     import cats.Functor;
+  //
+  //     val F = Functor[Σ]
+  //   };
+  //
+  //   implicit def signatureFunctor[Σ[_]: Signature] = org.hablapps.azucar.Signature[Σ].F
+  //
+  //   trait FAlgebra[X] extends Algebra[Σ,X]{
+  //     val sig: Signature[Σ] = Signature
+  //   }
+  //
+  //   object FAlgebra{
+  //     def apply[X](implicit F: FAlgebra[X]) = F
+  //   }
+  //
+  //    import scalaz.Isomorphism.$less$tilde$greater;
+  //    import scalaz.$tilde$greater;
+  //    import Signature._
+  //
+  //    val iso: <~>[Monoid, FAlgebra] = {
+  //      final class $anon extends <~>[Monoid, FAlgebra] {
+  //        def to: ~>[Monoid, FAlgebra] = {
+  //          final class $anon extends ~>[Monoid, FAlgebra] {
+  //            def apply[A](algebra: Monoid[A]): FAlgebra[A] = {
+  //              final class $anon extends FAlgebra[A] {
+  //                def apply(fx: Σ[A]): A = fx match {
+  //                  case Mzero() => algebra.mzero()
+  //                  case Mappend((a1 @ _), (a2 @ _)) => algebra.mappend(a1, a2)
+  //                }
+  //              };
+  //              new $anon()
+  //            }
+  //          };
+  //          new $anon()
+  //        };
+  //        def from: ~>[FAlgebra, Monoid] = {
+  //          final class $anon extends ~>[FAlgebra, Monoid] {
+  //            def apply[A](falgebra: FAlgebra[A]): Monoid[A] = {
+  //              final class $anon extends Monoid[A] {
+  //                def mzero(): A = falgebra(Mzero());
+  //                def mappend(a1: A, a2: A): A = falgebra(Mappend(a1, a2))
+  //              };
+  //              new $anon()
+  //            }
+  //          };
+  //          new $anon()
+  //        }
+  //      };
+  //      new $anon()
+  //    }
+  //
+  //    implicit def fromFAlgebra[X](implicit FAlgebra: FAlgebra[X]): Monoid[X] =
+  //     iso.from(FAlgebra)
+  //
+  //   implicit def fromOAlgebra[X](implicit OAlgebra: Monoid[X]): FAlgebra[X] =
+  //     iso.to(OAlgebra)
+  //
+  //  };
+  //  object Monoid extends MonoidFAlgebra{
+  //    def apply[A](implicit M: Monoid[A]): Monoid[A] = M
+  //  }
 
   def test(oalgebra: Monoid[Int], falgebra: Monoid.FAlgebra[Int]){
     import Monoid.{Mzero, Mappend}
@@ -95,45 +95,45 @@ class AlgebraTest extends FunSpec with Matchers {
     }
   }
 
-  describe("Generate F-algebras from O-algebras"){
-
-    implicit val IntMonoidOAlgebra = new Monoid[Int] {
-      def mzero() = 0
-      def mappend(a1: Int, a2: Int) = a1 + a2
-    }
-
-    val IntMonoidFAlgebra: Monoid.FAlgebra[Int] = Monoid.FAlgebra[Int]
-
-    test(IntMonoidOAlgebra, IntMonoidFAlgebra)
-  }
-
-  describe("Generate O-algebras from F-algebras"){
-    import Monoid.{Σ, Mzero, Mappend}
-
-    implicit val IntMonoidFAlgebra = new Monoid.FAlgebra[Int] {
-      def apply(fx: Σ[Int]): Int = fx match {
-        case Mzero() => 0
-        case Mappend(i1, i2) => i1 + i2
-      }
-    }
-
-    val IntMonoidOAlgebra: Monoid[Int] = Monoid[Int]
-
-    test(IntMonoidOAlgebra, IntMonoidFAlgebra)
-  }
-
-  describe("Generate Signature"){
-
-    it("Functor for signature should work"){
-      import Monoid.{Mzero, Mappend}, Monoid.Signature.F
-
-      F.map(Mappend(3, 2))(_ * 2) shouldBe Mappend(6, 4)
-      F.map(Mzero[Int]())(_ + 1) shouldBe Mzero()
-    }
-
-    it("Implicit evidences should be found"){
-      Signature[Monoid.Σ]
-      cats.Functor[Monoid.Σ]
-    }
-  }
+  // describe("Generate F-algebras from O-algebras"){
+  //
+  //   implicit val IntMonoidOAlgebra = new Monoid[Int] {
+  //     def mzero() = 0
+  //     def mappend(a1: Int, a2: Int) = a1 + a2
+  //   }
+  //
+  //   val IntMonoidFAlgebra: Monoid.FAlgebra[Int] = Monoid.FAlgebra[Int]
+  //
+  //   test(IntMonoidOAlgebra, IntMonoidFAlgebra)
+  // }
+  //
+  // describe("Generate O-algebras from F-algebras"){
+  //   import Monoid.{Σ, Mzero, Mappend}
+  //
+  //   implicit val IntMonoidFAlgebra = new Monoid.FAlgebra[Int] {
+  //     def apply(fx: Σ[Int]): Int = fx match {
+  //       case Mzero() => 0
+  //       case Mappend(i1, i2) => i1 + i2
+  //     }
+  //   }
+  //
+  //   val IntMonoidOAlgebra: Monoid[Int] = Monoid[Int]
+  //
+  //   test(IntMonoidOAlgebra, IntMonoidFAlgebra)
+  // }
+  //
+  // describe("Generate Signature"){
+  //
+  //   it("Functor for signature should work"){
+  //     import Monoid.{Mzero, Mappend}, Monoid.Signature.F
+  //
+  //     F.map(Mappend(3, 2))(_ * 2) shouldBe Mappend(6, 4)
+  //     F.map(Mzero[Int]())(_ + 1) shouldBe Mzero()
+  //   }
+  //
+  //   it("Implicit evidences should be found"){
+  //     Signature[Monoid.Σ]
+  //     cats.Functor[Monoid.Σ]
+  //   }
+  // }
 }
