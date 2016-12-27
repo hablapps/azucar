@@ -2,8 +2,7 @@ package org.hablapps.azucar
 
 import cats.Functor
 
-trait Algebra[X] {
-  type F[_]
-  val F: Functor[F]
-  def apply(fx: F[X]): X
+trait Algebra[Σ[_], X] {
+  val F: Functor[Σ]
+  def apply(fx: Σ[X]): X
 }
