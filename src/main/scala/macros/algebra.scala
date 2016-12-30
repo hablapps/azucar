@@ -226,7 +226,15 @@ class AlgebraMacros(val c: Context) {
           q"sealed abstract class Σ[_[_], _]" :: cases
         }
 
-        def generateADTCompanion = ???
+        // TODO: this isn't going to be trivial at all!
+        private val functorIns =
+          q"implicit val functorInstance = ???"
+
+        def generateADTCompanion = q"""
+          object Σ {
+            $functorIns
+          }
+        """
 
         def generateFAlgebra = ???
 
@@ -238,7 +246,10 @@ class AlgebraMacros(val c: Context) {
 
         def toConversor = ???
 
-        def generateMainSummoner = ???
+        def generateMainSummoner = q"""
+          def apply[${tparam.name}[_]](
+            implicit ev: ${typeclass.name}[${tparam.name}]) = ev
+        """
       }
     }
 
