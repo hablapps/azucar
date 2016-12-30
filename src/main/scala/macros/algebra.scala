@@ -236,9 +236,25 @@ class AlgebraMacros(val c: Context) {
           }
         """
 
-        def generateFAlgebra = ???
+        private val fFunctor =
+          q"val F: Functor[Σ] = Functor[Σ]"
 
-        def generateFAlgebraCompanion = ???
+        def generateFAlgebra = q"""
+          trait FAlgebra[${tparam.name}[_]] extends Algebra[Σ, ${tparam.name}] {
+            $fFunctor
+          }
+        """
+
+        private val fAlgSummoner = q"""
+          def apply[${tparam.name}[_]](
+            implicit ev: FAlgebra[${tparam.name}]) = ev
+        """
+
+        def generateFAlgebraCompanion = q"""
+          object FAlgebra {
+            $fAlgSummoner
+          }
+        """
 
         def generateIso = ???
 
