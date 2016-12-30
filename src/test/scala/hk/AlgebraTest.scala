@@ -7,7 +7,7 @@ import macros.algebra
 
 class HKAlgebraTest extends FunSpec with Matchers {
 
-  /*@algebra*/ trait Monad[F[_]] {
+  @algebra trait Monad[F[_]] {
     def point[A](a: A): F[A]
     def bind[A,B](p: F[A])(f: A => F[B]): F[B]
   }

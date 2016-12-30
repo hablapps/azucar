@@ -79,7 +79,8 @@ class AlgebraMacros(val c: Context) {
 
         def generateADT = {
           val cases = typeclassMethods.map { method => q"""
-            case class ${capitalize(method.name.toTypeName, TypeName(_))}[${tparam.name}](
+            case class ${capitalize(method.name.toTypeName, TypeName(_))}[
+              ${tparam.name}](
                 ..${method.vparamss.flatten})
               extends Σ[${tparam.name}]
           """
@@ -206,7 +207,39 @@ class AlgebraMacros(val c: Context) {
           q"def apply[A](implicit ev: ${typeclass.name}[A]) = ev"
       }
 
-      def hkGenerator(typeclass: ClassDef): Generator = ???
+      def hkGenerator(typeclass2: ClassDef) = new Generator {
+
+        def typeclass = typeclass2
+
+        def generateImports = List()
+
+        def generateADT = {
+          val cases = typeclassMethods.map { method =>
+            val AppliedTypeTree(_, List(arg)) = method.tpt
+            q"""
+              case class ${capitalize(method.name.toTypeName, TypeName(_))}[
+                ${tparam.name}, ..${method.tparams}](
+                  ..${method.vparamss.flatten})
+                extends Σ[${tparam.name}, $arg]
+            """
+          }
+          q"sealed abstract class Σ[_[_], _]" :: cases
+        }
+
+        def generateADTCompanion = ???
+
+        def generateFAlgebra = ???
+
+        def generateFAlgebraCompanion = ???
+
+        def generateIso = ???
+
+        def fromConversor = ???
+
+        def toConversor = ???
+
+        def generateMainSummoner = ???
+      }
     }
 
     annottees.map(_.tree) match {
