@@ -258,9 +258,34 @@ class AlgebraMacros(val c: Context) {
 
         def generateIso = q"val iso = ???"
 
-        def fromConversor = q"def from = ???"
+        def fromConversor = q"""
+          implicit def fromOAlgebra[$tparam](implicit
+              algebra: ${typeclass.name}[${tparam.name}]): FAlgebra[${tparam.name}] = ???
+        """
 
-        def toConversor = q"def to = ???"
+        private val toConversorRHS = {
+          val defs: List[DefDef] = typeclassMethods.map {
+            // XXX: removes `DEFERRED` modifier. Is this the best way to do so?
+            case DefDef(x, name, tparams, vparamss, tpt, _) => {
+              trace("Modifiers: " + x)
+              val args = vparamss.flatten.map(t => Ident(t.name))
+              val rhs =
+                q"falgebra.apply(${capitalize(name.toTermName, TermName(_))}(..$args))"
+              DefDef(Modifiers(), name, tparams, vparamss, tpt, rhs)
+            }
+          }
+          q"""
+            new ${typeclass.name}[${tparam.name}] {
+              ..$defs
+            }
+          """
+        }
+
+        def toConversor = q"""
+          implicit def fromFAlgebra[$tparam](implicit
+              falgebra: FAlgebra[${tparam.name}]): ${typeclass.name}[${tparam.name}] =
+            $toConversorRHS
+        """
 
         def generateMainSummoner = q"""
           def apply[${tparam.name}[_]](
