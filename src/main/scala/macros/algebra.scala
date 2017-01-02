@@ -255,8 +255,10 @@ class AlgebraMacros(val c: Context) {
           }
         """
 
-        private val fFunctor =
-          q"val F: Functor[Σ] = Functor[Σ]"
+        private val fFunctor = q"""
+          val F: org.hablapps.azucar.hk.Functor[Σ] =
+            org.hablapps.azucar.hk.Functor[Σ]
+        """
 
         def generateFAlgebra = q"""
           trait FAlgebra[${tparam.name}[_]]
