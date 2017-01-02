@@ -211,7 +211,7 @@ class AlgebraMacros(val c: Context) {
 
         def typeclass = typeclass2
 
-        def generateImports = List()
+        def generateImports = List(q"import scalaz.~>")
 
         def generateADT = {
           val cases = typeclassMethods.map { method =>
@@ -258,16 +258,41 @@ class AlgebraMacros(val c: Context) {
 
         def generateIso = q"val iso = ???"
 
+        private val fromConversorRHS = {
+          val cases: List[CaseDef] = typeclassMethods.map {
+            case DefDef(_, name, _, vparamss, _, _) => {
+              val idens = vparamss.map(_.map(t => Ident(t.name)))
+              val binds =
+                vparamss.flatten.map(t => Bind(t.name, Ident(termNames.WILDCARD)))
+              val rhs = idens.foldLeft[Tree](q"algebra.$name")(Apply.apply)
+              CaseDef(q"${capitalize(name, TermName(_))}(..$binds)", EmptyTree, rhs)
+            }
+          }
+
+          // XXX: kind-projector is not working here, so I had to use a manual
+          // type alias `ΣAux` as a workaround.
+          val match_ = Match(q"fa", cases)
+          q"""
+            {
+              type ΣAux[A] = Σ[${tparam.name}, A]
+              new FAlgebra[${tparam.name}] {
+                val apply = new (ΣAux ~> ${tparam.name}) {
+                  def apply[A](fa: ΣAux[A]): ${tparam.name}[A] = $match_
+                }
+              }
+            }
+          """
+        }
+
         def fromConversor = q"""
           implicit def fromOAlgebra[$tparam](implicit
-              algebra: ${typeclass.name}[${tparam.name}]): FAlgebra[${tparam.name}] = ???
+              algebra: ${typeclass.name}[${tparam.name}]): FAlgebra[${tparam.name}] =
+            $fromConversorRHS
         """
 
         private val toConversorRHS = {
           val defs: List[DefDef] = typeclassMethods.map {
-            // XXX: removes `DEFERRED` modifier. Is this the best way to do so?
-            case DefDef(x, name, tparams, vparamss, tpt, _) => {
-              trace("Modifiers: " + x)
+            case DefDef(_, name, tparams, vparamss, tpt, _) => {
               val args = vparamss.flatten.map(t => Ident(t.name))
               val rhs =
                 q"falgebra.apply(${capitalize(name.toTermName, TermName(_))}(..$args))"
