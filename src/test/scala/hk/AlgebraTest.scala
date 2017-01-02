@@ -144,4 +144,59 @@ class HKAlgebraTest extends FunSpec with Matchers {
     }
   }
 
+  /* IO: no Fs do appear in the LHS of operators */
+
+  import scala.io.StdIn.readLine
+
+  @algebra trait IO[F[_]] {
+    def read: F[String]
+    def write(msg: String): F[Unit]
+  }
+
+  def test2(oalgebra: IO[Id], falgebra: IO.FAlgebra[Id]){
+    import IO.{ Read, Write }
+
+    it("read should match") {
+      oalgebra.read shouldBe falgebra.apply(Read())
+    }
+
+    it("write should match") {
+      oalgebra.write("xyz") shouldBe falgebra.apply(Write("xyz"))
+    }
+  }
+
+  describe("Generate F-algebras from O-algebras (IO)"){
+
+    implicit val IdIOOAlgebra = new IO[Id] {
+      def read = "constant"
+      def write(msg: String) = ()
+    }
+
+    val IdIOFAlgebra: IO.FAlgebra[Id] = IO.FAlgebra[Id]
+
+    test2(IdIOOAlgebra, IdIOFAlgebra)
+  }
+
+  describe("Generate O-algebras from F-algebras (IO)") {
+    import scalaz.~>
+    import IO.{ Σ, Read, Write }
+
+    implicit val IdIOFAlgebra = new IO.FAlgebra[Id] {
+      val apply = new (Σ[Id, ?] ~> Id) {
+        def apply[T](s: Σ[Id, T]): T = s match {
+          case Read() => "constant"
+          case Write(msg) => ()
+        }
+      }
+      // Don't know why it fails ...
+      // λ[Σ[Id,?]~>Id]{
+      //   case Point(a) => a
+      //   case Bind(p, f) => f(p)
+      // }
+    }
+
+    val IdIOOAlgebra: IO[Id] = IO[Id]
+
+    test2(IdIOOAlgebra, IdIOFAlgebra)
+  }
 }
