@@ -11,6 +11,18 @@ class AlgebraTest extends FunSpec with Matchers {
     def mappend(a1: A, a2: A): A
   }
 
+  object Monoid {
+
+    def instance[A](mzero2: A)(mappend2: (A, A) => A) = new Monoid[A] {
+      def mzero() = mzero2
+      def mappend(a1: A, a2: A) = mappend2(a1, a2)
+    }
+
+    implicit def stringInstance = instance("")(_ + _)
+
+    val whatever: Boolean = true
+  }
+
   // trait MonoidFAlgebra {
   //
   //   sealed abstract class Σ[_];
@@ -148,6 +160,14 @@ class AlgebraTest extends FunSpec with Matchers {
 
     it("Implicit evidences should be found") {
       cats.Functor[Monoid.Σ]
+    }
+  }
+
+  describe("Existing companion") {
+
+    it("Existing encodings should prevail") {
+      Monoid[String]
+      Monoid.whatever shouldBe true
     }
   }
 }
