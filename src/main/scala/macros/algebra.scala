@@ -218,12 +218,12 @@ class AlgebraMacros(val c: Context) {
             val AppliedTypeTree(_, List(arg)) = method.tpt
             q"""
               case class ${capitalize(method.name.toTypeName, TypeName(_))}[
-                ${tparam.name}, ..${method.tparams}](
+                $tparam, ..${method.tparams}](
                   ..${method.vparamss.flatten})
                 extends Σ[${tparam.name}, $arg]
             """
           }
-          q"sealed abstract class Σ[_[_], _]" :: cases
+          q"sealed abstract class Σ[F[_], X]" :: cases
         }
 
         // TODO: this isn't going to be trivial at all!
@@ -246,8 +246,8 @@ class AlgebraMacros(val c: Context) {
         """
 
         private val fAlgSummoner = q"""
-          def apply[${tparam.name}[_]](
-            implicit ev: FAlgebra[${tparam.name}]) = ev
+          def apply[${tparam.name}[_]](implicit ev: FAlgebra[${tparam.name}]) =
+            ev
         """
 
         def generateFAlgebraCompanion = q"""
@@ -256,11 +256,11 @@ class AlgebraMacros(val c: Context) {
           }
         """
 
-        def generateIso = ???
+        def generateIso = q"val iso = ???"
 
-        def fromConversor = ???
+        def fromConversor = q"def from = ???"
 
-        def toConversor = ???
+        def toConversor = q"def to = ???"
 
         def generateMainSummoner = q"""
           def apply[${tparam.name}[_]](
