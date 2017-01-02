@@ -12,6 +12,19 @@ class HKAlgebraTest extends FunSpec with Matchers {
     def bind[A,B](p: F[A])(f: A => F[B]): F[B]
   }
 
+  object Monad {
+
+    implicit val optionMonad = new Monad[Option] {
+      def point[A](a: A) = Option(a)
+      def bind[A, B](p: Option[A])(f: A => Option[B]) = p match {
+        case None => None
+        case Some(a) => f(a)
+      }
+    }
+
+    val whatever: Boolean = true
+  }
+
   // trait MonadFAlgebra {
   //   import scalaz.~>
   //
@@ -141,6 +154,14 @@ class HKAlgebraTest extends FunSpec with Matchers {
 
     it("Implicit evidences should be found") {
       Functor[Monad.Σ]
+    }
+  }
+
+  describe("Existing companion") {
+
+    it("Existing encodings should prevail") {
+      Monad[Option]
+      Monad.whatever shouldBe true
     }
   }
 

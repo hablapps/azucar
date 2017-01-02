@@ -20,6 +20,8 @@ class AlgebraMacros(val c: Context) {
 
       def typeclass: ClassDef
 
+      def existingModule: Option[ModuleDef]
+
       def generateImports: List[Tree]
 
       def generateADT: List[ClassDef]
@@ -62,8 +64,12 @@ class AlgebraMacros(val c: Context) {
         }
       """
 
+      // XXX: we get the body of the existing companion by means of
+      // `_.impl.body.tail`, since the first position of the body is `this`
+      // constructor. Does this hold for every companion object?
       def generateMainCompanion: ModuleDef = q"""
         object ${typeclass.name.toTermName} extends $traitName {
+          ..${existingModule.fold(List.empty[Tree])(_.impl.body.tail)}
           $generateMainSummoner
         }
       """
@@ -71,9 +77,13 @@ class AlgebraMacros(val c: Context) {
 
     object Generator {
 
-      def plainGenerator(typeclass2: ClassDef) = new Generator {
+      def plainGenerator(
+          typeclass2: ClassDef,
+          existing: Option[ModuleDef] = Option.empty) = new Generator {
 
         def typeclass = typeclass2
+
+        def existingModule = existing
 
         def generateImports = isoImports
 
@@ -207,9 +217,13 @@ class AlgebraMacros(val c: Context) {
           q"def apply[A](implicit ev: ${typeclass.name}[A]) = ev"
       }
 
-      def hkGenerator(typeclass2: ClassDef) = new Generator {
+      def hkGenerator(
+          typeclass2: ClassDef,
+          existing: Option[ModuleDef] = Option.empty) = new Generator {
 
         def typeclass = typeclass2
+
+        def existingModule = existing
 
         def generateImports = List(q"import scalaz.~>")
 
@@ -323,28 +337,32 @@ class AlgebraMacros(val c: Context) {
       }
     }
 
+    def generate(typeclass: ClassDef, existing: Option[ModuleDef] = None) = {
+
+      val tparam = typeclass.tparams.head
+
+      val generator =
+        if (tparam.tparams.isEmpty)
+          Generator.plainGenerator(typeclass, existing)
+        else
+          Generator.hkGenerator(typeclass, existing)
+
+      val result = c.Expr(q"""
+        $typeclass
+        ${generator.generateMainTrait}
+        ${generator.generateMainCompanion}
+      """)
+      trace(s"Generated algebra for '${typeclass.name}':\n" + showCode(result.tree))
+
+      result
+    }
+
     annottees.map(_.tree) match {
-      case (typeclass: ClassDef) :: Nil if typeclass.tparams.size == 1 => {
-
-        val tparam = typeclass.tparams.head
-
-        val generator =
-          if (tparam.tparams.isEmpty)
-            Generator.plainGenerator(typeclass)
-          else
-            Generator.hkGenerator(typeclass)
-
-        val result = c.Expr(q"""
-          $typeclass
-          ${generator.generateMainTrait}
-          ${generator.generateMainCompanion}
-        """)
-        trace(s"Generated algebra for '${typeclass.name}':\n" + showCode(result.tree))
-
-        result
-      }
-      case (typeClass: ClassDef) :: (companion: ModuleDef) :: Nil =>
-        abort("TODO: coexistence with companion is not implemented yet")
+      case (typeclass: ClassDef) :: Nil if typeclass.tparams.size == 1 =>
+        generate(typeclass)
+      case (typeclass: ClassDef) :: (companion: ModuleDef) :: Nil
+          if typeclass.tparams.size == 1 =>
+        generate(typeclass, Option(companion))
       case other :: Nil =>
         abort("@algebra can't be applied here")
     }
