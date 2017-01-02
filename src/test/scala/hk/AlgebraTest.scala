@@ -76,72 +76,72 @@ class HKAlgebraTest extends FunSpec with Matchers {
   //  def apply[F[_]](implicit M: Monad[F]): Monad[F] = M
   // }
 
-  // import scalaz.Id, Id._
-  //
-  // def test(oalgebra: Monad[Id], falgebra: Monad.FAlgebra[Id]){
-  //   import Monad.{Point, Bind}
-  //
-  //   it("point should match") {
-  //     oalgebra.point(1) shouldBe falgebra.apply(Point(1))
-  //   }
-  //
-  //   it("bind should match") {
-  //     oalgebra.bind[Int,Int](1)(identity) shouldBe falgebra.apply(Bind[Id,Int,Int](1, identity))
-  //   }
-  // }
-  //
-  // describe("Generate F-algebras from O-algebras"){
-  //
-  //   implicit val IdMonadOAlgebra = new Monad[Id] {
-  //     def point[A](a: A) = a
-  //     def bind[A,B](a1: A)(f: A => B) = f(a1)
-  //   }
-  //
-  //   val IdMonadFAlgebra: Monad.FAlgebra[Id] = Monad.FAlgebra[Id]
-  //
-  //   test(IdMonadOAlgebra, IdMonadFAlgebra)
-  // }
-  //
-  // describe("Generate O-algebras from F-algebras") {
-  //   import scalaz.~>
-  //   import Monad.{Σ, Point, Bind}
-  //
-  //   implicit val IdMonadFAlgebra = new Monad.FAlgebra[Id] {
-  //     val apply = new (Σ[Id,?]~>Id){
-  //       def apply[T](s: Σ[Id,T]): T = s match {
-  //         case Point(a) => a
-  //         case Bind(p,f) => f(p)
-  //       }
-  //     }
-  //     // Don't know why it fails ...
-  //     // λ[Σ[Id,?]~>Id]{
-  //     //   case Point(a) => a
-  //     //   case Bind(p, f) => f(p)
-  //     // }
-  //   }
-  //
-  //   val IdMonadOAlgebra: Monad[Id] = Monad[Id]
-  //
-  //   test(IdMonadOAlgebra, IdMonadFAlgebra)
-  // }
-  //
-  // describe("Generate Signature") {
-  //
-  //   it("Functor for signature should work"){
-  //     import scalaz.~>
-  //     import Monad.{Point, Bind, Σ}
-  //
-  //     val optionBind: Σ[Option,Int] =
-  //       Σ.F.map(λ[Id~>Option]{Some(_)})(Bind[Id,Int,Int](1,identity))
-  //
-  //     optionBind should matchPattern{
-  //       case Bind(Some(1),f) if f(1) == Some(1) =>
-  //     }
-  //   }
-  //
-  //   it("Implicit evidences should be found") {
-  //     Functor[Monad.Σ]
-  //   }
-  // }
+  import scalaz.Id, Id._
+
+  def test(oalgebra: Monad[Id], falgebra: Monad.FAlgebra[Id]){
+    import Monad.{Point, Bind}
+
+    it("point should match") {
+      oalgebra.point(1) shouldBe falgebra.apply(Point(1))
+    }
+
+    it("bind should match") {
+      oalgebra.bind[Int,Int](1)(identity) shouldBe falgebra.apply(Bind[Id,Int,Int](1, identity))
+    }
+  }
+
+  describe("Generate F-algebras from O-algebras"){
+
+    implicit val IdMonadOAlgebra = new Monad[Id] {
+      def point[A](a: A) = a
+      def bind[A,B](a1: A)(f: A => B) = f(a1)
+    }
+
+    val IdMonadFAlgebra: Monad.FAlgebra[Id] = Monad.FAlgebra[Id]
+
+    test(IdMonadOAlgebra, IdMonadFAlgebra)
+  }
+
+  describe("Generate O-algebras from F-algebras") {
+    import scalaz.~>
+    import Monad.{Σ, Point, Bind}
+
+    implicit val IdMonadFAlgebra = new Monad.FAlgebra[Id] {
+      val apply = new (Σ[Id,?]~>Id){
+        def apply[T](s: Σ[Id,T]): T = s match {
+          case Point(a) => a
+          case Bind(p,f) => f(p)
+        }
+      }
+      // Don't know why it fails ...
+      // λ[Σ[Id,?]~>Id]{
+      //   case Point(a) => a
+      //   case Bind(p, f) => f(p)
+      // }
+    }
+
+    val IdMonadOAlgebra: Monad[Id] = Monad[Id]
+
+    test(IdMonadOAlgebra, IdMonadFAlgebra)
+  }
+
+  describe("Generate Signature") {
+
+    // it("Functor for signature should work"){
+    //   import scalaz.~>
+    //   import Monad.{Point, Bind, Σ}
+    //
+    //   val optionBind: Σ[Option,Int] =
+    //     Σ.F.map(λ[Id~>Option]{Some(_)})(Bind[Id,Int,Int](1,identity))
+    //
+    //   optionBind should matchPattern{
+    //     case Bind(Some(1),f) if f(1) == Some(1) =>
+    //   }
+    // }
+
+    it("Implicit evidences should be found") {
+      Functor[Monad.Σ]
+    }
+  }
 
 }

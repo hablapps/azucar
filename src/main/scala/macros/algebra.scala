@@ -226,9 +226,14 @@ class AlgebraMacros(val c: Context) {
           q"sealed abstract class Σ[F[_], X]" :: cases
         }
 
-        // TODO: this isn't going to be trivial at all!
-        private val functorIns =
-          q"implicit val functorInstance = ???"
+        // TODO: we need a HK `kittens` to bring this functionality
+        // XXX: kind-projector is not working here, so I had to use manual λs!
+        private val functorIns = q"""
+          implicit def functorInstance = new Functor[Σ] {
+            def map[G[_], H[_]](f: G ~> H)
+            : ({type L1[A] = Σ[G, A]})#L1 ~> ({type L2[A] = Σ[H, A]})#L2 = ???
+          }
+        """
 
         def generateADTCompanion = q"""
           object Σ {
@@ -256,7 +261,7 @@ class AlgebraMacros(val c: Context) {
           }
         """
 
-        def generateIso = q"val iso = ???"
+        def generateIso = q"lazy val iso = ???"
 
         private val fromConversorRHS = {
           val cases: List[CaseDef] = typeclassMethods.map {
@@ -269,8 +274,7 @@ class AlgebraMacros(val c: Context) {
             }
           }
 
-          // XXX: kind-projector is not working here, so I had to use a manual
-          // type alias `ΣAux` as a workaround.
+          // XXX: kind-projector is not working here!
           val match_ = Match(q"fa", cases)
           q"""
             {
