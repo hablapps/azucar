@@ -122,7 +122,7 @@ class AlgebraMacros(val c: Context) {
           q"val F: Functor[Σ] = Functor[Σ]"
 
         def generateFAlgebra = q"""
-          trait FAlgebra[X] extends Algebra[Σ, X] {
+          trait FAlgebra[X] extends org.hablapps.azucar.Algebra[Σ, X] {
             ..$functorImports
             $fFunctor
           }
@@ -243,7 +243,7 @@ class AlgebraMacros(val c: Context) {
         // TODO: we need a HK `kittens` to bring this functionality
         // XXX: kind-projector is not working here, so I had to use manual λs!
         private val functorIns = q"""
-          implicit def functorInstance = new Functor[Σ] {
+          implicit def functorInstance = new org.hablapps.azucar.hk.Functor[Σ] {
             def map[G[_], H[_]](f: G ~> H)
             : ({type L1[A] = Σ[G, A]})#L1 ~> ({type L2[A] = Σ[H, A]})#L2 = ???
           }
@@ -259,7 +259,8 @@ class AlgebraMacros(val c: Context) {
           q"val F: Functor[Σ] = Functor[Σ]"
 
         def generateFAlgebra = q"""
-          trait FAlgebra[${tparam.name}[_]] extends Algebra[Σ, ${tparam.name}] {
+          trait FAlgebra[${tparam.name}[_]]
+              extends org.hablapps.azucar.hk.Algebra[Σ, ${tparam.name}] {
             $fFunctor
           }
         """
