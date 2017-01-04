@@ -122,10 +122,7 @@ class AlgebraMacros(val c: Context) {
           q"val F: Functor[Σ] = Functor[Σ]"
 
         def generateFAlgebra = q"""
-          trait FAlgebra[X] extends org.hablapps.azucar.Algebra[Σ, X] {
-            ..$functorImports
-            $fFunctor
-          }
+          trait FAlgebra[X] extends matryoshka.Algebra[Σ, X]
         """
 
         private val fAlgSummoner =
