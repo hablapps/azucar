@@ -18,88 +18,10 @@ class AlgebraTest extends FunSpec with Matchers {
       def mappend(a1: A, a2: A) = mappend2(a1, a2)
     }
 
-    implicit def stringInstance = instance("")(_ + _)
+    implicit def stringInstance: Monoid[String] = instance("")(_ + _)
 
     val whatever: Boolean = true
   }
-
-  // trait MonoidFAlgebra {
-  //
-  //   sealed abstract class Σ[_];
-  //   case class Mzero[A]() extends Σ[A];
-  //   case class Mappend[A](a1: A, a2: A) extends Σ[A];
-  //
-  //   object Σ {
-  //     import cats.derived._;
-  //     import functor._;
-  //     import legacy._;
-  //     import cats.Functor;
-  //
-  //     implicit val functorInstance = Functor[Σ]
-  //
-  //     def to[A](e: A): Σ[A] = ???
-  //
-  //     def from[A](s: Σ[A])(m: Monoid[A]): A = s match {
-  //       case Mzero() => m.mzero()
-  //       case Mappend(a1,a2) => m.mappend(a1,a2)
-  //     }
-  //   }
-  //
-  //   trait FAlgebra[X] extends Algebra[Σ, X] {
-  //     import cats.instances.option._
-  //     import cats.Functor
-  //     val F: Functor[Σ] = Functor[Σ]
-  //   }
-  //
-  //   object FAlgebra{
-  //     def apply[X](implicit F: FAlgebra[X]) = F
-  //   }
-  //
-  //    import scalaz.Isomorphism.$less$tilde$greater;
-  //    import scalaz.$tilde$greater;
-  //
-  //    val iso: <~>[Monoid, FAlgebra] = {
-  //      final class $anon extends <~>[Monoid, FAlgebra] {
-  //        def to: ~>[Monoid, FAlgebra] = {
-  //          final class $anon extends ~>[Monoid, FAlgebra] {
-  //            def apply[A](algebra: Monoid[A]): FAlgebra[A] = {
-  //              final class $anon extends FAlgebra[A] {
-  //                def apply(fx: Σ[A]): A = fx match {
-  //                  case Mzero() => algebra.mzero()
-  //                  case Mappend((a1 @ _), (a2 @ _)) => algebra.mappend(a1, a2)
-  //                }
-  //              };
-  //              new $anon()
-  //            }
-  //          };
-  //          new $anon()
-  //        };
-  //        def from: ~>[FAlgebra, Monoid] = {
-  //          final class $anon extends ~>[FAlgebra, Monoid] {
-  //            def apply[A](falgebra: FAlgebra[A]): Monoid[A] = {
-  //              final class $anon extends Monoid[A] {
-  //                def mzero(): A = falgebra(Mzero());
-  //                def mappend(a1: A, a2: A): A = falgebra(Mappend(a1, a2))
-  //              };
-  //              new $anon()
-  //            }
-  //          };
-  //          new $anon()
-  //        }
-  //      };
-  //      new $anon()
-  //    }
-  //
-  //    implicit def fromFAlgebra[X](implicit FAlgebra: FAlgebra[X]): Monoid[X] =
-  //     iso.from(FAlgebra)
-  //
-  //   implicit def fromOAlgebra[X](implicit OAlgebra: Monoid[X]): FAlgebra[X] =
-  //     iso.to(OAlgebra)
-  // };
-  //
-  // object Monoid extends MonoidFAlgebra{
-  //  def apply[A](implicit M: Monoid[A]): Monoid[A] = M
-  // }
 
   def test(oalgebra: Monoid[Int], falgebra: Monoid.FAlgebra[Int]){
     import Monoid.{Mzero, Mappend}
@@ -129,7 +51,8 @@ class AlgebraTest extends FunSpec with Matchers {
       def mappend(a1: Int, a2: Int) = a1 + a2
     }
 
-    val IntMonoidFAlgebra: Monoid.FAlgebra[Int] = Monoid.FAlgebra[Int]
+    val IntMonoidFAlgebra: Monoid.FAlgebra[Int] =
+      Monoid.FAlgebra[Int]
 
     test(IntMonoidOAlgebra, IntMonoidFAlgebra)
   }
@@ -169,5 +92,32 @@ class AlgebraTest extends FunSpec with Matchers {
       Monoid[String]
       Monoid.whatever shouldBe true
     }
+  }
+
+  describe("Catamorphism for free") {
+    import scalaz.syntax.id._
+
+    import matryoshka._
+    import matryoshka.implicits._
+    import matryoshka.data.Mu
+
+    import Monoid._
+
+    // ugh! this requires scalaz Functor!
+    implicit def F: scalaz.Functor[Σ] = new scalaz.Functor[Σ] {
+      def map[A, B](fa: Σ[A])(f: A => B): Σ[B] = fa match {
+        case Mzero() => Mzero()
+        case Mappend(a1, a2) => Mappend(f(a1), f(a2))
+      }
+    }
+
+    implicit def monoidCorecursive[T](implicit
+        T: Corecursive.Aux[T, Σ]): Monoid[T] =
+      Monoid.instance(Mzero[T]().embed)(Mappend[T](_, _).embed)
+
+    def expr[T](implicit T: Corecursive.Aux[T, Σ]): T =
+      monoidCorecursive[T] |> (M => M.mappend(M.mzero, M.mzero))
+
+    expr[Mu[Σ]].cata(FAlgebra[String])
   }
 }

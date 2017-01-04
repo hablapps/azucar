@@ -9,7 +9,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   "org.scalaz" %% "scalaz-core" % "7.2.8",
   "org.typelevel" %% "kittens" % "1.0.0-M7-SNAPSHOT",
-  "org.scalatest" %% "scalatest" % "3.0.1" % "test")
+  "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+  "com.slamdata" %% "matryoshka-core" % "0.16.1")
 
 addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full)
 
