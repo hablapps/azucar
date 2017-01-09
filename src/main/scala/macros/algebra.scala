@@ -99,10 +99,8 @@ class AlgebraMacros(val c: Context) {
         }
 
         private val kittenImports = List(
-          q"import cats.derived._",
-          q"import functor._",
-          q"import legacy._",
-          q"import cats.Functor")
+          q"import scalaz.Functor",
+          q"import org.hablapps.azucar.DerivingFunctor._")
 
         private val functorIns =
           q"implicit val functorInstance = Functor[Σ]"
@@ -115,8 +113,7 @@ class AlgebraMacros(val c: Context) {
         """
 
         private val functorImports = List(
-          q"import cats.instances.option._",
-          q"import cats.Functor")
+          q"import scalaz.Functor")
 
         private val fFunctor =
           q"val F: Functor[Σ] = Functor[Σ]"

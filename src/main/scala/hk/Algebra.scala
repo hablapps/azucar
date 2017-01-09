@@ -14,4 +14,3 @@ trait Algebra[F[_[_],_], E[_]]{
   val F: Functor[F]
   val apply: F[E,?] ~> E
 }
-
