@@ -82,7 +82,7 @@ class AlgebraTest extends FunSpec with Matchers {
     }
 
     it("Implicit evidences should be found") {
-      cats.Functor[Monoid.Σ]
+      scalaz.Functor[Monoid.Σ]
     }
   }
 
@@ -102,14 +102,6 @@ class AlgebraTest extends FunSpec with Matchers {
     import matryoshka.data.Mu
 
     import Monoid._
-
-    // ugh! this requires scalaz Functor!
-    implicit def F: scalaz.Functor[Σ] = new scalaz.Functor[Σ] {
-      def map[A, B](fa: Σ[A])(f: A => B): Σ[B] = fa match {
-        case Mzero() => Mzero()
-        case Mappend(a1, a2) => Mappend(f(a1), f(a2))
-      }
-    }
 
     implicit def monoidCorecursive[T](implicit
         T: Corecursive.Aux[T, Σ]): Monoid[T] =
