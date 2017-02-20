@@ -101,15 +101,48 @@ class AlgebraTest extends FunSpec with Matchers {
     import matryoshka.implicits._
     import matryoshka.data.Mu
 
-    import Monoid._
+    it("Given an algebra, folds the whole structure") {
+      import Monoid.{ Σ, Mzero, Mappend, FAlgebra }
 
-    implicit def monoidCorecursive[T](implicit
-        T: Corecursive.Aux[T, Σ]): Monoid[T] =
-      Monoid.instance(Mzero[T]().embed)(Mappend[T](_, _).embed)
+      implicit def monoidCorecursive[T](implicit
+          T: Corecursive.Aux[T, Σ]): Monoid[T] =
+        Monoid.instance(Mzero[T]().embed)(Mappend[T](_, _).embed)
 
-    def expr[T](implicit T: Corecursive.Aux[T, Σ]): T =
-      monoidCorecursive[T] |> (M => M.mappend(M.mzero, M.mzero))
+      def expr[A](implicit M: Monoid[A]): A =
+        M.mappend(M.mzero, M.mzero)
 
-    expr[Mu[Σ]].cata(FAlgebra[String])
+      expr[Mu[Σ]].cata(FAlgebra[String]) shouldBe ""
+    }
+
+    // https://github.com/slamdata/matryoshka#introduction
+    @algebra trait Expr[A] {
+      def num(value: Long): A
+      def mul(l: A, r: A): A
+    }
+
+    it("Given matryoshka's tutorial expression, eval it!") {
+      import Expr.{ Σ, Num, Mul, FAlgebra }
+
+      implicit def eval = new Expr[Long] {
+        def num(value: Long) = value
+        def mul(l: Long, r: Long) = l * r
+      }
+
+      implicit def exprCorecursive[T](implicit
+          T: Corecursive.Aux[T, Σ]): Expr[T] =
+        new Expr[T] {
+          def num(value: Long) = Num[T](value).embed
+          def mul(l: T, r: T) = Mul[T](l, r).embed
+        }
+
+      def expr[A](implicit E: Expr[A]): A =
+        E.mul(E.num(2), E.mul(E.num(3), E.num(4)))
+
+      expr[Mu[Σ]].cata(FAlgebra[Long]) shouldBe 24
+
+      // or alternatively
+
+      expr[Long] shouldBe 24
+    }
   }
 }
